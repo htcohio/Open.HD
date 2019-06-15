@@ -537,14 +537,6 @@ def IsTimeToExit():
         SendInfoToDisplay("Program interrupted by RC joystick")
         ExitRCThread = 1
         return True
-    else:
-        if SelectedControl == "GPIO":
-            GPIOState = GPIO.input(26)
-            if(GPIOState == True):
-                SendInfoToDisplay("Program interrupted by GPIO")
-                ExitRCThread = 1
-                return True
-
     return False
 
 def InitUDPServer():
