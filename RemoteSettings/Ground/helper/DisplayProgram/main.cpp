@@ -85,23 +85,23 @@ void DrawImage(int width, int height)
 {
 	SwitchImageByTimer();
 
-	int offsetx = width - ( width/2);
-	int offsety =  height - (height/2);
+	int offsetx = 0; //width - ( width/2);
+	int offsety =  0;// height - (height/2);
 	switch(SelectedImage)
 	{
 		case 0:
-			DrawImageAtFit(offsetx, offsety  , width/2, height/2, Joystick);
+			DrawImageAtFit(offsetx, offsety  , width, height, Joystick);
 		break;
 		case 1:
-			DrawImageAtFit(offsetx, offsety  , width/2, height/2, *AwaitingIter);
+			DrawImageAtFit(offsetx, offsety  , width, height, *AwaitingIter);
 		break;
 
                 case 2:
-                        DrawImageAtFit(offsetx, offsety  , width/2, height/2, *DownloadIter);
+                        DrawImageAtFit(offsetx, offsety  , width, height, *DownloadIter);
                 break;
 
 		default:
-			DrawImageAtFit(offsetx, offsety  , width/2, height/2, Joystick);
+			DrawImageAtFit(offsetx, offsety  , width, height, Joystick);
 
 
 
