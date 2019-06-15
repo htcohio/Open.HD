@@ -54,6 +54,10 @@ int tx_restart_count_last;
 bool no_signal = false;
 FILE *fptr;
 
+#define OSD_MODE_DEFAULT 0
+#define OSD_MODE_NONE 1
+#define MAX_OSD_MODE 2
+int osd_mode = 0;
 
 long long current_ts() {
     struct timeval te;
@@ -134,8 +138,20 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
     // call loopUpdate to update stuff that should be updated even when particular elements are off (like total curent);
     loopUpdate(td);
 
+    if ( digitalRead(1) == 0 )
+    {
+        osd_mode++;
+        osd_mode = osd_mode % MAX_OSD_MODE;
+    }
+
     Start(width,height); // render start
     setfillstroke();
+
+    if ( osd_mode == OSD_MODE_NONE )
+    {
+        End();
+        return;
+    }
 
     if (td->rx_status_sysair->undervolt == 1) draw_message(0,"Undervoltage on TX","Check wiring/power-supply","Bitrate limited to 1 Mbit",WARNING_POS_X, WARNING_POS_Y, GLOBAL_SCALE);
     if (undervolt == 1) draw_message(0,"Undervoltage on RX","Check wiring/power-supply"," ",WARNING_POS_X, WARNING_POS_Y, GLOBAL_SCALE);
