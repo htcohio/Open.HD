@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <sys/select.h>
 #include <locale.h>
-
+#include <wiringPi.h>
 #include "render.h"
 #include "osdconfig.h"
 #include "telemetry.h"
@@ -70,6 +70,12 @@ int main(int argc, char *argv[]) {
     setpriority(PRIO_PROCESS, 0, 10);
 
     setlocale(LC_ALL, "en_GB.UTF-8");
+
+    if (wiringPiSetup() == -1 )
+	    return 1;
+
+    pinMode(1, INPUT);
+    pullUpDnControl(1, PUD_UP);
 
     uint8_t buf[263]; // Mavlink maximum packet length
     size_t n;
