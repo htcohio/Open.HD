@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import fileinput
 import socket
 import hashlib
@@ -11,7 +10,6 @@ from datetime import datetime
 import argparse
 import RPi.GPIO as GPIO
 import threading
-
 lock = threading.Lock()
 
 parser = argparse.ArgumentParser()
@@ -33,6 +31,7 @@ print("Selected: " + SelectedControl)
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
 
 GPIO.setup(23, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(24, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -71,6 +70,10 @@ SmartSync_StartupMode=1
 SmartSyncGround_Countdown=45
 NotBreakByTimerIfLastRequestWas=3
 
+
+TxPowerConfigFilePath="/etc/modprobe.d/ath9k_hw.conf"
+TxPowerFromConfig="-1"
+TxPowerFromAth9k_hw="-1"
 
 RequestGroundChecksum = bytearray(b'RequestGroundChecksum')
 RequestSFile = bytearray(b'RequestSFile')
@@ -540,7 +543,7 @@ def IsTimeToExit():
     return False
 
 def InitUDPServer():
-    for i in range(0,10):
+    for i in range(0,6):
         SendInfoToDisplay("SwitchToAwaiting")
         sleep(0.02)
 
@@ -548,6 +551,7 @@ def InitUDPServer():
     global IsMainScriptRunning
     global LastRequestTime
     UDP_IP = ""
+    SendInfoToDisplay("Waiting to send file " + SettingsFilePath)
     try:
         RecvSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         RecvSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -622,7 +626,7 @@ def InitUDPServer():
 
             if data == DownloadFinished:
                 LastRequestTime = datetime.now()
-                SendInfoToDisplay("DownloadFinished")
+                SendInfoToDisplay("DownloadFinished for file " + SettingsFilePath)
                 tmp = "ACK".encode('ascii')
                 for i in range(0,10):
                     SendData(tmp)
@@ -702,7 +706,7 @@ def StartRCThreadIn():
 
     RCSock.close()
     SendInfoToDisplay("RC thread terminated")
-
+    SendInfoToDisplay(SettingsFilePath)
 
 def ReturnWlanFreq():
     if FreqFromConfigFile != "0" and WlanName != "0":
@@ -759,7 +763,63 @@ def ShowSettings():
     SendInfoToDisplay("NotBreakByTimerIfLastRequestWas=" + str(NotBreakByTimerIfLastRequestWas) )
 
 
+
+def ReadTxPowerAth9k_hw():
+    global TxPowerFromAth9k_hw
+    try:
+        with open(TxPowerConfigFilePath, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("options ath9k_hw txpower") == True:
+                    SplitLines = line.split("=")
+                    FilterDigits = SplitLines[1]
+                    TxPowerFromAth9k_hw = re.sub("\D", "", FilterDigits)
+
+            return True
+
+    except Exception as e:
+       print(e)
+       return False
+    return False
+
+def ReadTxPower():
+    global TxPowerFromConfig
+    try:
+        with open(SettingsFilePath, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("TxPowerGround") == True:
+                    SplitLines = line.split("=")
+                    FilterDigits = SplitLines[1]
+                    TxPowerFromConfig = re.sub("\D", "", FilterDigits)
+
+            return True
+
+    except Exception as e:
+       print(e)
+       return False
+    return False
+
+def CheckTxPower():
+    try:
+        if ReadTxPowerAth9k_hw() != False:
+            print("TxPowerFromAth9k_hw= " + TxPowerFromAth9k_hw)
+            if ReadTxPower() != False:
+                print("TxPowerFromConfig= " + TxPowerFromConfig)
+                if TxPowerFromConfig != TxPowerFromAth9k_hw:
+                    print("TxPower not equal Check if all ok and apply")
+                    if TxPowerFromAth9k_hw != "-1" and TxPowerFromConfig != "-1":
+                        print("all ok, apply")
+                        subprocess.check_call(['/usr/local/bin/txpower_atheros', TxPowerFromConfig ] )
+                        return True
+    except Exception as e:
+        print(e)
+        return False
+    return False
+
 #################################################### start
+
+CheckTxPower()
 
 
 if os.path.isfile("/tmp/ReadyToGo") == True:
@@ -772,7 +832,6 @@ RC_UDP_IN_thread = threading.Thread(target=StartRCThreadIn)
 RC_UDP_IN_thread.start()
 
 SendInfoToDisplay("Parse config file...")
-SendInfoToDisplay("Config file: " + SettingsFilePath)
 if ReadSettingsFromConfigFile() == True:
     SendInfoToDisplay("Completed without errors")
     ShowSettings()
@@ -789,9 +848,12 @@ else:
 StartRC_Reader(SmartSyncRC_Channel)
 
 if SmartSync_StartupMode != 1:
-    SendInfoToDisplay("SmartSync disabled. Starting countdown to check force On ")
-    for i in range(0, 5):
-        SendInfoToDisplay(" Countdown: "+ str(5-i))
+    SendInfoToDisplay("SmartSync disabled.Starting RC reader to check force On ")
+    for i in range(0, 10):
+        #SendInfoToDisplay("I is:", i, "RC value: ", RC_Value)
+        #stdout.write("\r RC value: "+  str(RC_Value) + " Retry: " + str(i) + " of 30")
+        #stdout.flush()
+        SendInfoToDisplay(" RC value: "+  str(RC_Value) + " Retry: " + str(i) + " of 10")
         if RC_Value <= SmartSyncStayON_RC_Value and RC_Value != 0:
             SmartSync_StartupMode = 1
             SmartSyncGround_Countdown=0
@@ -810,7 +872,7 @@ if SmartSync_StartupMode != 1:
             SendInfoToDisplay("Timer disabled")
             break
 
-        sleep(0.6)
+        sleep(0.3)
 
 
 if SmartSync_StartupMode == 1:
