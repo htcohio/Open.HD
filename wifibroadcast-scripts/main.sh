@@ -187,16 +187,19 @@ case $TTY in
 		MAIN_RSSI_RX_FUNCTION		
     ;;
     /dev/tty5) # screenshot stuff
-		MAIN_SCREENSHOT_FUNCTION
+		# MAIN_SCREENSHOT_FUNCTION
+                sleep 365d
     ;;
     /dev/tty6) # Save of video after flight
 		MAIN_VIDEO_SAVE_FUNCTION	
     ;;
     /dev/tty7) # check tether	
-		MAIN_TETHER_FUNCTION
+		# MAIN_TETHER_FUNCTION
+                sleep 365d
     ;;
     /dev/tty8) # check hotspot
-		MAIN_HOTSPOT_FUNCTION
+		# MAIN_HOTSPOT_FUNCTION
+                sleep 365d
     ;;
     /dev/tty9) # check alive
 		MAIN_ALIVE_FUNCTION

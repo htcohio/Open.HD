@@ -849,7 +849,7 @@ StartRC_Reader(SmartSyncRC_Channel)
 
 if SmartSync_StartupMode != 1:
     SendInfoToDisplay("SmartSync disabled.Starting RC reader to check force On ")
-    for i in range(0, 10):
+    for i in range(0, 6):
         #SendInfoToDisplay("I is:", i, "RC value: ", RC_Value)
         #stdout.write("\r RC value: "+  str(RC_Value) + " Retry: " + str(i) + " of 30")
         #stdout.flush()

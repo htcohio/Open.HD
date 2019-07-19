@@ -184,7 +184,7 @@ function datarate_to_wifi_settings {
 	case $DATARATE in
 		1)
 		UPLINK_WIFI_BITRATE=11
-		TELEMETRY_WIFI_BITRATE=11
+		TELEMETRY_WIFI_BITRATE=5.5
 		VIDEO_WIFI_BITRATE=5.5
 		;;
 		2)
