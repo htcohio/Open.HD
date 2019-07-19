@@ -173,9 +173,7 @@ int main(int argc, char *argv[]) {
 	    }
 	    counter++;
 //	    fprintf(stderr,"OSD: counter: %d\n",counter);
-	    // render only if we have data that needs to be processed as quick as possible (attitude)
-	    // or if three iterations (~150ms) passed without rendering
-	    if ((do_render == 1) || (counter == 3)) {
+	    if (counter == 3) {
 //		fprintf(stderr," rendering! ");
 		prev_time = current_timestamp();
 		fpscount++;

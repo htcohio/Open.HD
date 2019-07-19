@@ -55,8 +55,10 @@ bool no_signal = false;
 FILE *fptr;
 
 #define OSD_MODE_DEFAULT 0
-#define OSD_MODE_NONE 1
-#define MAX_OSD_MODE 2
+#define OSD_MODE_MINIMAL 1
+#define OSD_MODE_NONE 2
+#define MAX_OSD_MODE 3
+
 int osd_mode = 0;
 
 long long current_ts() {
@@ -137,12 +139,15 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
 
     // call loopUpdate to update stuff that should be updated even when particular elements are off (like total curent);
     loopUpdate(td);
-
-    if ( digitalRead(1) == 0 )
+    static int lastDigitalRead = 1;
+    if ( digitalRead(1) == 0 && lastDigitalRead == 1 )
     {
+        lastDigitalRead = 0;
         osd_mode++;
         osd_mode = osd_mode % MAX_OSD_MODE;
     }
+    else
+        lastDigitalRead = 1;
 
     Start(width,height); // render start
     setfillstroke();
@@ -265,13 +270,15 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
 
 
 #ifdef SYS
-    draw_sys(td->rx_status_sysair->cpuload, td->rx_status_sysair->temp, cpuload_gnd, temp_gnd, SYS_POS_X, SYS_POS_Y, SYS_SCALE * GLOBAL_SCALE);
+    if ( osd_mode != OSD_MODE_MINIMAL )
+        draw_sys(td->rx_status_sysair->cpuload, td->rx_status_sysair->temp, cpuload_gnd, temp_gnd, SYS_POS_X, SYS_POS_Y, SYS_SCALE * GLOBAL_SCALE);
 #endif
 
 
 #ifdef FLIGHTMODE
     #ifdef MAVLINK
-    draw_mode(td->mav_flightmode, td->armed, FLIGHTMODE_POS_X, FLIGHTMODE_POS_Y, FLIGHTMODE_SCALE * GLOBAL_SCALE);
+    if ( osd_mode != OSD_MODE_MINIMAL )
+       draw_mode(td->mav_flightmode, td->armed, FLIGHTMODE_POS_X, FLIGHTMODE_POS_Y, FLIGHTMODE_SCALE * GLOBAL_SCALE);
     #endif
 #endif
 
@@ -282,7 +289,8 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
 
 
 #if defined(CLIMB) && defined(MAVLINK)
-    draw_climb(td->mav_climb, CLIMB_POS_X, CLIMB_POS_Y, CLIMB_SCALE * GLOBAL_SCALE);
+    if ( osd_mode != OSD_MODE_MINIMAL )
+        draw_climb(td->mav_climb, CLIMB_POS_X, CLIMB_POS_Y, CLIMB_SCALE * GLOBAL_SCALE);
 #endif
 
 
@@ -359,9 +367,11 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
 
 #ifdef COMPASS
     #if COMPASS_USECOG == true
-    draw_compass(td->cog, course_to(home_lat, home_lon, td->latitude, td->longitude), 50, COMPASS_POS_Y, COMPASS_SCALE * GLOBAL_SCALE);
+    if ( osd_mode != OSD_MODE_MINIMAL )
+        draw_compass(td->cog, course_to(home_lat, home_lon, td->latitude, td->longitude), 50, COMPASS_POS_Y, COMPASS_SCALE * GLOBAL_SCALE);
     #else
-    draw_compass(td->heading, course_to(home_lat, home_lon, td->latitude, td->longitude), 50, COMPASS_POS_Y, COMPASS_SCALE * GLOBAL_SCALE);
+    if ( osd_mode != OSD_MODE_MINIMAL )
+        draw_compass(td->heading, course_to(home_lat, home_lon, td->latitude, td->longitude), 50, COMPASS_POS_Y, COMPASS_SCALE * GLOBAL_SCALE);
     #endif
 #endif
 
@@ -423,6 +433,8 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
 
 
 #ifdef SAT
+if ( osd_mode != OSD_MODE_MINIMAL )
+{
     #if defined(FRSKY)
     //we assume that we have a fix if we get the NS and EW values from frsky protocol
     if ((td->ew == 'E' || td->ew == 'W') && (td->ns == 'N' || td->ns == 'S')){
@@ -433,6 +445,7 @@ void render(telemetry_data_t *td, uint8_t cpuload_gnd, uint8_t temp_gnd, uint8_t
     #elif defined(MAVLINK) || defined(SMARTPORT) || defined(LTM)
     draw_sat(td->sats, td->fix, td->hdop, SAT_POS_X, SAT_POS_Y, SAT_SCALE * GLOBAL_SCALE);
     #endif
+}
 #endif
 
 
@@ -1190,7 +1203,8 @@ void draw_card_signal(int8_t signal, int signal_good, int card, int adapter_cnt,
 
     sprintf(buffer, "dBm");
     Text(getWidth(pos_x)+getWidth(0.4), getHeight(pos_y) - card * height_text, buffer, myfont, text_scale*0.6);
-
+#ifdef DOWNLINK_DETAILS_DBM_ONLY
+#else
     if (restart_count - tx_restart_count_last > 0) {
     int y;
     for (y=0; y<adapter_cnt; y++) {
@@ -1205,6 +1219,7 @@ void draw_card_signal(int8_t signal, int signal_good, int card, int adapter_cnt,
     int percent_lost_card=(int)((double)lost/packets*100);
     sprintf(buffer, "%d (%d%%)", lost, percent_lost_card);
     Text(getWidth(pos_x)+width_unit+getWidth(0.65)*scale, getHeight(pos_y) - card * height_text, buffer, myfont, text_scale*0.7);
+#endif
 }
 
 
